@@ -1,61 +1,60 @@
+````markdown
 # Diagrama de Secuencia - Transferencia Bancaria (PlantUML)
 
 Este diagrama detalla el flujo de una transferencia saliente hacia un banco externo.
 
-```plantuml
-@startuml
-!theme plain
-autonumber
+Puedes renderizar esta secuencia usando el archivo [docs/puml/transfer_sequence.puml](docs/puml/transfer_sequence.puml).
 
-actor "Cliente (App)" as Client
-participant "API Server" as API
-database "DB (Postgres)" as DB
-participant "PaymentCore" as Core
-participant "BankConnector" as Conn
-participant "Banco Externo" as Bank
+## Integración con Banco Pagador - Transferencia
 
-== Inicio de Transferencia ==
-Client -> API: POST /payments/transfer\n{amount, cbu_dest}
-activate API
+### Flujo de secuencia
 
-API -> Core: process_payment(data)
-activate Core
+El detalle de la integración con el banco se encuentra en [docs/puml/transfer_bank_integration.puml](docs/puml/transfer_bank_integration.puml).
 
-Core -> Core: validate_limits_balance()
-Core -> DB: INSERT Payment (Status: CREATED)
+### Contrato del Banco (resumen)
 
-Core -> Conn: execute_transfer(data)
-activate Conn
+- **Endpoint**: `POST /movements/transfer-request`.
+- **Seguridad**: Mutual TLS + VPN + encabezados `Authorization: Bearer {token}` y `X-SIGNATURE: HmacSHA256([uri]+payload, secret-key)`.
+- **Payload**:
+  ```json
+  {
+    "originId": "12345ABCabc",
+    "from": {
+      "addressType": "CBU_CVU",
+      "address": "4320001010003138730019",
+      "owner": {
+        "personIdType": "CUI",
+        "personId": "1234567890"
+      }
+    },
+    "to": {
+      "addressType": "CBU_CVU",
+      "address": "4320001010003138730019",
+      "owner": {
+        "personIdType": "CUI",
+        "personId": "1234567890"
+      }
+    },
+    "body": {
+      "currencyId": "032",
+      "amount": 123.23,
+      "description": "description",
+      "concept": "VAR"
+    }
+  }
+  ```
+- **Respuesta**:
+  ```json
+  {
+    "statusCode": 0,
+    "message": "Transferencia creada con exito",
+    "time": "Fri, 14 Feb 2025 08:04:25 -0300"
+  }
+  ```
 
-Conn -> Conn: build_request()
-Conn -> Bank: POST /v1/transfers
-activate Bank
-Bank --> Conn: 200 OK {id: "tx_123", status: "PENDING"}
-deactivate Bank
+### Ubicación recomendada para la implementación
 
-Conn -> Conn: handle_response()
-Conn --> Core: Returns ConnectorResponse\n(Status: PENDING)
-deactivate Conn
+- Implementar el conector específico del banco siguiendo la interfaz [app/core/connectors/interface.py](app/core/connectors/interface.py#L1-L43).
+- Orquestar la llamada en `PaymentOperation` desde [app/core/payments/operation.py](app/core/payments/operation.py#L26-L47), donde se encadenan `build_request`, `execute_request` y `handle_response`.
 
-Core -> DB: UPDATE Payment (Status: PENDING, ref: "tx_123")
-Core --> API: PaymentData (PENDING)
-deactivate Core
-
-API --> Client: 200 OK {id: "pay_999", status: "PENDING"}
-deactivate API
-
-== Confirmación Asíncrona (Webhook) ==
-Bank -> API: POST /webhooks/banco_x\n{id: "tx_123", status: "SUCCESS"}
-activate API
-
-API -> Core: handle_webhook_event(data)
-activate Core
-Core -> DB: SELECT Payment WHERE ref="tx_123"
-Core -> DB: UPDATE Payment (Status: COMPLETED)
-deactivate Core
-
-API --> Bank: 200 OK
-deactivate API
-
-@enduml
-```
+````
