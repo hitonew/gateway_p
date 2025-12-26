@@ -54,6 +54,7 @@
   ```bash
   docker compose ps
   ```
+- El servicio `api` expone la aplicación `app.main:app` (FastAPI) en el puerto 8000, habilitando los endpoints `/api/v1/payments`.
 
 ## 6. Acceso a la aplicación
 - API disponible en `http://<IP_VPS>:8000`.
@@ -70,7 +71,50 @@
   docker compose exec -e PYTHONPATH=/app api pytest tests/test_api.py
   ```
 
-## 8. Mantenimiento básico
+## 8. Consultar datos desde la API
+- Crear un pago de prueba y obtener el `id` generado:
+  ```bash
+  curl -X POST http://localhost:8000/api/v1/payments \
+    -H "Content-Type: application/json" \
+    -d '{"amount": 100.0, "currency": "USD"}'
+  ```
+- Respuesta esperada (ejemplo real de la prueba del 26/12/2025):
+  ```json
+  {
+    "id": "5decdb50-25d3-4850-ba84-c5de1e41c278",
+    "amount": 100.0,
+    "currency": "USD",
+    "status": "PENDING",
+    "created_at": "2025-12-26T19:15:16.270386",
+    "updated_at": "2025-12-26T19:15:16.270391"
+  }
+  ```
+- Procesar el pago para actualizar su estado (opcional, según prueba):
+  ```bash
+  curl -X POST http://localhost:8000/api/v1/payments/<PAYMENT_ID>/process
+  ```
+- Consultar el estado almacenado en memoria de un pago puntual:
+  ```bash
+  curl http://localhost:8000/api/v1/payments/<PAYMENT_ID>
+  ```
+- Ejemplo con el `id` previo:
+  ```bash
+  curl http://localhost:8000/api/v1/payments/5decdb50-25d3-4850-ba84-c5de1e41c278
+  ```
+  Resultado observado durante la prueba:
+  ```json
+  {
+    "id": "5decdb50-25d3-4850-ba84-c5de1e41c278",
+    "amount": 100.0,
+    "currency": "USD",
+    "status": "PENDING",
+    "created_at": "2025-12-26T19:15:16.270386",
+    "updated_at": "2025-12-26T19:15:16.270391"
+  }
+  ```
+- Nota: el servicio actual usa un repositorio en memoria; los datos existen mientras el contenedor `api` está activo y no hay endpoint de listado general.
+
+## 9. Mantenimiento básico
 - Ver logs en vivo:
   ```bash
   docker compose logs -f api scheduler

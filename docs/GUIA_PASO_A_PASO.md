@@ -74,13 +74,22 @@ Una vez que los contenedores están arriba (especialmente la base de datos `db`)
     ```bash
     curl http://localhost:8000/health
     ```
-    Respuesta esperada: `{"status": "ok", "service": "api_server"}`
+    Respuesta esperada (configuración al 26/12/2025, corriendo `app.main:app`): `{"status": "ok"}`
 
 2.  **Docs API (Swagger UI)**:
     Visita: [http://localhost:8000/docs](http://localhost:8000/docs)
     Deberías ver la documentación interactiva de la API.
 
-3.  **Logs**:
+3.  **Prueba funcional de pagos**:
+    ```bash
+    curl -X POST http://localhost:8000/api/v1/payments \
+         -H "Content-Type: application/json" \
+         -d '{"amount": 100.0, "currency": "USD"}'
+    curl http://localhost:8000/api/v1/payments/<ID_DEVUELTO>
+    ```
+    Ejemplo real: el 26/12/2025 se creó el pago `5decdb50-25d3-4850-ba84-c5de1e41c278` y se verificó en estado `PENDING` con la segunda llamada.
+
+4.  **Logs**:
     Si algo falla, revisa los logs:
     ```bash
     docker-compose logs -f api
