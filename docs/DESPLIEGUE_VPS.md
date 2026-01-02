@@ -60,6 +60,14 @@
 - API disponible en `http://<IP_VPS>:8000`.
 - Postgres expuesto en el puerto 5432 (credenciales en `docker-compose.yml`).
 - Redis expuesto en el puerto 6379.
+- Variables de entorno relevantes para el conector Banco Comercio (definir en `.env` o exportar antes de `docker compose up`):
+  ```bash
+  export BDC_BASE_URL=https://api-homo.bdcconecta.com
+  export BDC_CLIENT_ID=<tu_client_id>
+  export BDC_CLIENT_SECRET=<tu_client_secret>
+  export BDC_SECRET_KEY=<tu_secret_key>
+  export TRANSFER_CONNECTOR_MODE=mock  # usar "banco_comercio" para hablar con el banco real
+  ```
 
 ## 7. Ejecutar pruebas dentro del contenedor API
 - Instalar utilidades necesarias (solo la primera vez):
@@ -70,6 +78,15 @@
   ```bash
   docker compose exec -e PYTHONPATH=/app api pytest tests/test_api.py
   ```
+- Probar el flujo de transferencias (usa el stub del conector en pruebas, pero el endpoint real espera credenciales válidas):
+  ```bash
+  curl -X POST http://localhost:8000/api/v1/transfers \
+    -H "Content-Type: application/json" \
+    -d @payload_transfer.json
+
+  curl http://localhost:8000/api/v1/transfers/<ORIGIN_ID_GENERADO>
+  ```
+- En modo `TRANSFER_CONNECTOR_MODE=mock` se obtiene respuesta exitosa por defecto; enviar `"concept": "REJECT"` o `"concept": "FAIL"` en el body fuerza un rechazo simulado.
 
 ## 8. Consultar datos desde la API
 - Crear un pago de prueba y obtener el `id` generado:

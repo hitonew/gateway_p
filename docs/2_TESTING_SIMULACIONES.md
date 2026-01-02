@@ -101,3 +101,14 @@ Para probar resiliencia y manejo de errores.
 1. Iniciar pago: `POST /payments`
 2. El `MockConnector` debe estar configurado para fallar si el `amount` es, por ejemplo, `999999`.
 3. **Verificación:** La respuesta debe ser HTTP 4xx/5xx o 200 con `status: "FAILED"` y `reason: "INSUFFICIENT_FUNDS"`.
+
+---
+
+## 7. Repetir pruebas automáticas dentro del entorno Docker
+Para ejecutar los tests end-to-end (incluyendo el flujo de transferencias contra el stub del conector) dentro del contenedor `api` ya levantado con `docker compose`:
+
+```bash
+docker compose -f gateway_p/docker-compose.yml exec -e PYTHONPATH=/app api pytest tests/test_api.py
+```
+
+Esto asegura que las dependencias (`fastapi`, `httpx`, etc.) y las configuraciones (`BDC_*`) cargadas en el contenedor se utilicen de forma consistente con el entorno de despliegue.

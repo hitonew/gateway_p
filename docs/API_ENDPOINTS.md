@@ -12,11 +12,60 @@ Este documento resume los endpoints HTTP disponibles en la plataforma actual. Se
 | POST | /api/v1/payments | Crea un pago en memoria y devuelve su representación. | JSON: `{ "amount": float, "currency": str }` | Objeto `Payment` con campos `id`, `amount`, `currency`, `status`, `created_at`, `updated_at`.
 | POST | /api/v1/payments/{payment_id}/process | Procesa el pago indicado utilizando el mock gateway. | Ruta: `payment_id` (UUID) | Mismo objeto `Payment` con estado actualizado (`COMPLETED` si monto < 1000, `FAILED` en caso contrario).
 | GET | /api/v1/payments/{payment_id} | Recupera un pago específico almacenado en memoria. | Ruta: `payment_id` (UUID) | Objeto `Payment` correspondiente o error 404 si no existe.
+| POST | /api/v1/transfers | Inicia una transferencia bancaria a través del conector Banco Comercio. | JSON con `source`, `destination`, `body` (detalle debajo) | `{ "paymentId", "originId", "status", "echoed_request", "bankResponse" }`.
+| GET | /api/v1/transfers/{originId} | Recupera el estado de una transferencia registrada. | Ruta: `originId` (string) | Objeto `PaymentData` almacenado o error 404 si no existe.
 
 ### Notas operativas
 - El repositorio activo es en memoria (`InMemoryPaymentRepository`), por lo que los datos persisten solo mientras el contenedor `api` está en ejecución.
 - El procesamiento simula una pasarela mediante `MockPaymentGateway`; no hay interacción con proveedores externos reales.
+- El conector Banco Comercio persiste los datos de la transferencia en memoria (`InMemoryTransferRepository`) y requiere las variables `BDC_BASE_URL`, `BDC_CLIENT_ID`, `BDC_CLIENT_SECRET` y `BDC_SECRET_KEY` (ver `config/settings.py`).
+- La variable `TRANSFER_CONNECTOR_MODE` define si el gateway usa el conector simulado (`mock`, valor por defecto) o el conector real de Banco Comercio (`banco_comercio`, `live`, `prod`). Con el modo simulado se puede forzar un rechazo enviando `concept: "REJECT"` o `concept: "FAIL"` en el body.
 - Ejemplo real (26/12/2025): `POST /api/v1/payments` con `{ "amount": 100.0, "currency": "USD" }` devolvió el pago `5decdb50-25d3-4850-ba84-c5de1e41c278` con estado `PENDING`; `GET /api/v1/payments/5decdb50-25d3-4850-ba84-c5de1e41c278` confirmó el mismo estado.
+
+#### Contrato `POST /api/v1/transfers`
+
+```json
+{
+	"source": {
+		"addressType": "CBU_CVU",
+		"address": "0000000000000000000000",
+		"owner": {
+			"personIdType": "CUI",
+			"personId": "20304050607",
+			"personName": "John Doe"
+		}
+	},
+	"destination": {
+		"addressType": "CBU_CVU",
+		"address": "9999999999999999999999",
+		"owner": {
+			"personIdType": "CUI",
+			"personId": "20987654321",
+			"personName": "Jane Roe"
+		}
+	},
+	"body": {
+		"amount": "123.45",
+		"currency": "ARS",
+		"description": "Test transfer",
+		"concept": "VAR"
+	}
+}
+```
+
+Respuesta (200):
+
+```json
+{
+	"paymentId": "e7fc8e79-7ca3-48c0-9c5b-0f26ff3bd2d2",
+	"originId": "6f0b9ea9541349f5b0399d0118c7d36d",
+	"status": "AUTHORIZED",
+	"echoed_request": { /* payload original normalizado */ },
+	"bankResponse": { "statusCode": 0, "message": "Transferencia creada con exito", ... }
+}
+```
+
+Errores esperados: `400` por validaciones de esquema (p.ej. monto negativo), `502` si falla la comunicación con el banco.
 
 ## 2. Servicio `app.api_server.main` (API Server Modular)
 

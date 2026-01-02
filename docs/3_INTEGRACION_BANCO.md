@@ -57,3 +57,18 @@ El banco notificará el resultado final asíncronamente.
 - Crear endpoint `POST /webhooks/bancox`
 - Validar firma criptográfica del banco.
 - Correlacionar `tx_id` y actualizar el estado de la `PaymentOperation`.
+
+## Implementación actual Banco de Comercio
+
+- Conector: [app/core/connectors/banco_comercio.py](app/core/connectors/banco_comercio.py)
+- Operación: reutiliza [app/core/payments/operation.py](app/core/payments/operation.py) inyectando `InMemoryTransferRepository` desde [app/adapters/api/dependencies.py](app/adapters/api/dependencies.py).
+- Nuevas rutas:
+    - `POST /api/v1/transfers` recibe `TransferRequest` (source/destination/body) y devuelve `paymentId`, `originId` y la respuesta raw del banco.
+    - `GET /api/v1/transfers/{originId}` devuelve el `PaymentData` persistido en memoria.
+- Variables de entorno requeridas (`.env`):
+    - `BDC_BASE_URL`
+    - `BDC_CLIENT_ID`
+    - `BDC_CLIENT_SECRET`
+    - `BDC_SECRET_KEY`
+    - `TRANSFER_CONNECTOR_MODE` (`mock` por defecto; usar `banco_comercio`/`live`/`prod` para operar contra el banco)
+- Dependencias externas: `httpx` para las solicitudes HTTP y `hmac` + `hashlib` para la firma `X-SIGNATURE`.
