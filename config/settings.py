@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     bdc_client_secret: str = ""
     bdc_secret_key: str = ""
     transfer_connector_mode: str = "mock"
+    persistence_backend: str = "database"
     
     class Config:
         env_file = ".env"

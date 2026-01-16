@@ -67,7 +67,9 @@
   export BDC_CLIENT_SECRET=<tu_client_secret>
   export BDC_SECRET_KEY=<tu_secret_key>
   export TRANSFER_CONNECTOR_MODE=mock  # usar "banco_comercio" para hablar con el banco real
+  export PERSISTENCE_BACKEND=database   # "memory" sólo para pruebas sin Postgres
   ```
+- El contenedor `api` ejecuta `alembic -c alembic.ini upgrade head` antes de levantar FastAPI; en despliegues manuales ejecutar la migración para crear `payments`, `transfers` y `transfer_events`.
 
 ## 7. Ejecutar pruebas dentro del contenedor API
 - Instalar utilidades necesarias (solo la primera vez):
@@ -87,6 +89,7 @@
   curl http://localhost:8000/api/v1/transfers/<ORIGIN_ID_GENERADO>
   ```
 - En modo `TRANSFER_CONNECTOR_MODE=mock` se obtiene respuesta exitosa por defecto; enviar `"concept": "REJECT"` o `"concept": "FAIL"` en el body fuerza un rechazo simulado.
+- Para inspeccionar lo persistido: `docker compose exec -T db psql -U postgres -d pagoflex -c "SELECT origin_id,status,created_at FROM transfers ORDER BY created_at DESC LIMIT 10;"`
 
 ## 8. Consultar datos desde la API
 - Crear un pago de prueba y obtener el `id` generado:

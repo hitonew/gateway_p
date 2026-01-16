@@ -16,9 +16,10 @@ Este documento resume los endpoints HTTP disponibles en la plataforma actual. Se
 | GET | /api/v1/transfers/{originId} | Recupera el estado de una transferencia registrada. | Ruta: `originId` (string) | Objeto `PaymentData` almacenado o error 404 si no existe.
 
 ### Notas operativas
-- El repositorio activo es en memoria (`InMemoryPaymentRepository`), por lo que los datos persisten solo mientras el contenedor `api` está en ejecución.
+- Desde enero 2026 el gateway persiste pagos, transferencias y eventos en PostgreSQL (`payments`, `transfers`, `transfer_events`). El contenedor `api` corre `alembic upgrade head` automáticamente; verificar la base `pagoflex` si se ejecuta por fuera de Docker.
+- El repositorio puede degradarse a memoria configurando `PERSISTENCE_BACKEND=memory` (por defecto `database`).
 - El procesamiento simula una pasarela mediante `MockPaymentGateway`; no hay interacción con proveedores externos reales.
-- El conector Banco Comercio persiste los datos de la transferencia en memoria (`InMemoryTransferRepository`) y requiere las variables `BDC_BASE_URL`, `BDC_CLIENT_ID`, `BDC_CLIENT_SECRET` y `BDC_SECRET_KEY` (ver `config/settings.py`).
+- El conector Banco Comercio requiere `BDC_BASE_URL`, `BDC_CLIENT_ID`, `BDC_CLIENT_SECRET`, `BDC_SECRET_KEY` y `TRANSFER_CONNECTOR_MODE` (ver `config/settings.py`).
 - La variable `TRANSFER_CONNECTOR_MODE` define si el gateway usa el conector simulado (`mock`, valor por defecto) o el conector real de Banco Comercio (`banco_comercio`, `live`, `prod`). Con el modo simulado se puede forzar un rechazo enviando `concept: "REJECT"` o `concept: "FAIL"` en el body.
 - Ejemplo real (26/12/2025): `POST /api/v1/payments` con `{ "amount": 100.0, "currency": "USD" }` devolvió el pago `5decdb50-25d3-4850-ba84-c5de1e41c278` con estado `PENDING`; `GET /api/v1/payments/5decdb50-25d3-4850-ba84-c5de1e41c278` confirmó el mismo estado.
 

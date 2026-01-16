@@ -1,7 +1,7 @@
 # Pagoflex Gateway
 
 ## Resumen
-- API FastAPI expuesta vía Docker Compose (servicio `api`) corriendo `app.main:app` en el puerto 8000.
+- API FastAPI expuesta vía Docker Compose (servicio `api`) corriendo `app.main:app` en el puerto 8000. Al iniciar el contenedor se ejecuta `alembic upgrade head` para crear/actualizar las tablas `payments`, `transfers` y `transfer_events` en PostgreSQL.
 - Dependencias administradas en `requirements.txt`; los contenedores ya incluyen FastAPI, Celery, SQLAlchemy y utilidades básicas.
 
 ## Documentación útil

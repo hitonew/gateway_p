@@ -71,4 +71,6 @@ El banco notificará el resultado final asíncronamente.
     - `BDC_CLIENT_SECRET`
     - `BDC_SECRET_KEY`
     - `TRANSFER_CONNECTOR_MODE` (`mock` por defecto; usar `banco_comercio`/`live`/`prod` para operar contra el banco)
+    - `PERSISTENCE_BACKEND` (`database` por defecto, `memory` para desactivar PostgreSQL)
 - Dependencias externas: `httpx` para las solicitudes HTTP y `hmac` + `hashlib` para la firma `X-SIGNATURE`.
+- Persistencia: `payments`, `transfers` y `transfer_events` almacenan pagos, transferencias y el historial de estados. Cada `save` en el conector registra un evento con el `status` y la metadata devuelta por el provider.

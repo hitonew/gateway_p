@@ -1,8 +1,17 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.adapters.api.dependencies import get_transfer_connector
+from app.adapters.api.dependencies import (
+    get_payment_operation,
+    get_payment_service,
+    get_transfer_connector,
+)
+from app.adapters.db.memory_repository import InMemoryPaymentRepository
+from app.adapters.db.memory_transfer_repository import InMemoryTransferRepository
+from app.adapters.payment.mock_gateway import MockPaymentGateway
+from app.core.payments.operation import PaymentOperation
 from app.core.connectors.interface import ConnectorIntegration
 from app.core.payments.types import ConnectorResponse, PaymentState
+from app.services.payment_service import PaymentService
 
 
 class StubConnector(ConnectorIntegration):
@@ -24,7 +33,22 @@ def override_connector():
     return StubConnector()
 
 
+_memory_payment_repository = InMemoryPaymentRepository()
+_memory_transfer_repository = InMemoryTransferRepository()
+_mock_gateway = MockPaymentGateway()
+
+
+async def override_payment_service():
+    return PaymentService(_memory_payment_repository, _mock_gateway)
+
+
+def override_payment_operation():
+    return PaymentOperation(transfer_repository=_memory_transfer_repository)
+
+
 app.dependency_overrides[get_transfer_connector] = override_connector
+app.dependency_overrides[get_payment_service] = override_payment_service
+app.dependency_overrides[get_payment_operation] = override_payment_operation
 
 client = TestClient(app)
 

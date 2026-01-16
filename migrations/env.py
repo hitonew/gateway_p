@@ -13,7 +13,8 @@ from app.db.base import Base
 # Import all models here so Alembic can detect them
 # from app.models import ... (if they are not imported in base or via other imports)
 # It's good practice to import your models module here if Base doesn't know about them yet
-from app.domain import models # Assuming models are here
+from app.domain import models  # noqa: F401
+from app.db import models as db_models  # noqa: F401  # Ensure models are registered
 
 config = context.config
 
